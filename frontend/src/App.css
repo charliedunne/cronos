@@ -159,12 +159,11 @@ button.danger:hover:not(:disabled) {
   text-decoration: underline;
 }
 
-/* Requirement create form (module detail page). */
-.requirement-create {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto;
+/* Work item create form (module detail page). */
+.work-item-create {
+  display: flex;
+  flex-direction: column;
   gap: 0.6rem;
-  align-items: end;
   margin: 1rem 0;
   padding: 0.9rem;
   background: var(--surface);
@@ -172,16 +171,12 @@ button.danger:hover:not(:disabled) {
   border-radius: 8px;
 }
 
-.requirement-create input[type="text"] {
-  grid-column: 1 / -1;
-}
-
-.requirement-create textarea {
-  grid-column: 1 / -1;
+.work-item-create textarea {
   resize: vertical;
 }
 
-.requirement-create .field {
+/* Labelled field used by the create form and the attribute grids. */
+.field {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -189,8 +184,65 @@ button.danger:hover:not(:disabled) {
   color: var(--muted);
 }
 
-/* Requirement list table. */
-.req-table {
+/* Attribute inputs rendered for the selected type in the create form. */
+.attr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.6rem;
+}
+
+/* Attribute inputs of an inline-editing row. */
+.attr-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 20rem;
+}
+
+/* Type badge in the work item table and the type registry page. */
+.type-badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: var(--text);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+/* Marks the built-in requirement type in the registry page. */
+.type-badge.builtin {
+  background: #fdf3e0;
+  color: #8a5b00;
+}
+
+/* One section per type on the admin type registry page. */
+.type-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.9rem;
+}
+
+.type-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Add/edit forms for types and attribute definitions. */
+.attr-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.6rem;
+  align-items: end;
+}
+
+/* Work item list table. */
+.item-table {
   width: 100%;
   border-collapse: collapse;
   background: var(--surface);
@@ -199,37 +251,37 @@ button.danger:hover:not(:disabled) {
   overflow: hidden;
 }
 
-.req-table th,
-.req-table td {
+.item-table th,
+.item-table td {
   text-align: left;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
 }
 
-.req-table th {
+.item-table th {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--muted);
 }
 
-.req-table tbody tr:last-child td {
+.item-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.req-id {
+.item-id {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.9rem;
   white-space: nowrap;
 }
 
-.req-text {
+.item-text {
   color: var(--muted);
   overflow-wrap: anywhere;
 }
 
-/* Lock state and row actions in the requirement table. */
+/* Lock state and row actions in the work item table. */
 .lock-cell {
   white-space: nowrap;
 }
@@ -260,9 +312,9 @@ button.danger:hover:not(:disabled) {
 }
 
 /* Inline edit row (only the lock holder reaches this state). */
-.req-edit-row input,
-.req-edit-row textarea,
-.req-edit-row select {
+.item-edit-row input,
+.item-edit-row textarea,
+.item-edit-row select {
   width: 100%;
   box-sizing: border-box;
 }

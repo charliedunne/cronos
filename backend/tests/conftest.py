@@ -7,8 +7,26 @@ from fastapi.testclient import TestClient
 
 from app.db import SessionLocal
 from app.main import app
-from app.models import Module, Requirement, User
+from app.models import Module, User, WorkItem
 from app.security import hash_password
+
+
+#: Finalizers registered by work-item type factories (see
+#: ``test_work_item_types.TypeFactory``); run after every test.
+_type_factory_finalizers: list = []
+
+
+@pytest.fixture(autouse=True)
+def _finalize_type_factories():
+    """Run registered work-item type factory cleanups after every test.
+
+    Runs last among function-scoped teardowns (it is set up first), so the
+    finalizers must not rely on fixture-provided clients being open.
+    """
+    yield
+    for finalize in reversed(_type_factory_finalizers):
+        finalize()
+    del _type_factory_finalizers[:]
 
 
 def _login_client(username: str, password: str) -> TestClient:
@@ -29,9 +47,9 @@ def _login_client(username: str, password: str) -> TestClient:
 def _cleanup_user_data(user_id: int) -> None:
     """Remove all data owned by a user, in FK-safe order.
 
-    Requirements inside the user's modules (regardless of creator), then
-    any remaining requirements created by the user, then the user's
-    modules, then the user itself. Locks cascade from requirement deletes.
+    Work items inside the user's modules (regardless of creator), then any
+    remaining work items created by the user, then the user's modules, then
+    the user itself. Locks cascade from work item deletes.
 
     @param user_id The id of the user whose data to remove.
     """
@@ -41,11 +59,11 @@ def _cleanup_user_data(user_id: int) -> None:
             for row in session.query(Module.id).filter(Module.created_by == user_id)
         ]
         if module_ids:
-            session.query(Requirement).filter(
-                Requirement.module_id.in_(module_ids)
+            session.query(WorkItem).filter(
+                WorkItem.module_id.in_(module_ids)
             ).delete(synchronize_session=False)
-        session.query(Requirement).filter(
-            Requirement.created_by == user_id
+        session.query(WorkItem).filter(
+            WorkItem.created_by == user_id
         ).delete(synchronize_session=False)
         session.query(Module).filter(Module.created_by == user_id).delete(
             synchronize_session=False

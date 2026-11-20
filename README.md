@@ -1,10 +1,19 @@
 # Cronos
 
-A requirements-management application: modules contain requirements with
-stable identifiers and a fixed attribute set (title, text, status,
-priority). Editing is protected by per-requirement locks — a user must
-block (lock) a requirement before modifying or deleting it, so concurrent
-editors cannot clobber each other's work.
+A work-item management application: modules contain work items of
+administrator-defined types, each with a stable identifier and its own set of
+attributes. Every work item carries a mandatory title; identifiers are
+assigned by the system as `<TYPE_PREFIX>-<sequence>` (e.g. `REQ-00012`).
+Editing is protected by per-item locks — a user must block (lock) an item
+before modifying or deleting it, so concurrent editors cannot clobber each
+other's work.
+
+Administrators manage the type registry from the "Types" page: create types
+with an id prefix and attribute definitions (string, text, integer, boolean,
+date, enum), edit or remove them, and set per-attribute required flags,
+defaults, and enum options. A built-in `requirement` type (prefix `REQ`) with
+text/status/priority attributes is seeded on first migration and cannot be
+deleted.
 
 ## Stack
 

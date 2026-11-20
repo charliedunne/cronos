@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 
 from app.config import get_settings
-from app.routers import auth, modules, requirements, users
+from app.routers import auth, modules, users, work_item_types, work_items
 
 
 def create_app() -> FastAPI:
@@ -25,7 +25,8 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix="/api/v1")
     app.include_router(users.router, prefix="/api/v1")
     app.include_router(modules.router, prefix="/api/v1")
-    app.include_router(requirements.router, prefix="/api/v1")
+    app.include_router(work_items.router, prefix="/api/v1")
+    app.include_router(work_item_types.router, prefix="/api/v1")
 
     return app
 

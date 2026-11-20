@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
 from app.deps import get_current_user, get_db
-from app.models import Module, Requirement, User
+from app.models import Module, User, WorkItem
 
 router = APIRouter(prefix="/modules", tags=["modules"])
 
@@ -125,25 +125,25 @@ def delete_module(
     user: User = Depends(get_current_user),
     db: DbSession = Depends(get_db),
 ) -> None:
-    """Delete a module that contains no requirements.
+    """Delete a module that contains no work items.
 
     @param module_id The id of the module to delete.
     @param user The authenticated caller (any role may delete modules).
     @param db Database session for persisting the deletion.
     @raises HTTPException 404 when no such module exists.
-    @raises HTTPException 409 when the module still contains requirements.
+    @raises HTTPException 409 when the module still contains work items.
     """
     module = _get_module_or_404(db, module_id)
-    has_requirements = (
-        db.query(Requirement.id)
-        .filter(Requirement.module_id == module.id)
+    has_work_items = (
+        db.query(WorkItem.id)
+        .filter(WorkItem.module_id == module.id)
         .first()
         is not None
     )
-    if has_requirements:
+    if has_work_items:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Module still contains requirements",
+            detail="Module still contains work items",
         )
     db.delete(module)
     db.commit()

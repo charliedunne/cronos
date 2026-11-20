@@ -14,43 +14,94 @@ export interface Module {
   name: string
 }
 
-/** Allowed requirement status values (spec: requirement-store). */
-export const REQUIREMENT_STATUSES = ['draft', 'in-review', 'approved', 'deprecated'] as const
+/** Data types allowed on attribute definitions (spec: work-items). */
+export const ATTRIBUTE_DATA_TYPES = [
+  'string',
+  'text',
+  'integer',
+  'boolean',
+  'date',
+  'enum',
+] as const
 
-/** Allowed requirement priority values (spec: requirement-store). */
-export const REQUIREMENT_PRIORITIES = ['low', 'medium', 'high'] as const
+/** An allowed attribute data type. */
+export type AttributeDataType = (typeof ATTRIBUTE_DATA_TYPES)[number]
 
-/** A requirement status value. */
-export type RequirementStatus = (typeof REQUIREMENT_STATUSES)[number]
+/** Payload for creating or updating an attribute definition (mirrors ``AttributeDefinitionIn``). */
+export interface AttributeDefinition {
+  key: string
+  label: string
+  data_type: AttributeDataType
+  /** Allowed values; only set for enum attributes. */
+  options: string[] | null
+  required: boolean
+  /** Applied by the system when a work item omits the key. */
+  default_value: unknown
+  /** Display order; unique per type. ``null`` = auto-assign (append) on create, unchanged on update. */
+  position: number | null
+}
 
-/** A requirement priority value. */
-export type RequirementPriority = (typeof REQUIREMENT_PRIORITIES)[number]
+/** Public representation of an attribute definition, including its id (mirrors ``AttributeDefinitionOut``). */
+export interface AttributeDefinitionOut extends AttributeDefinition {
+  id: number
+}
 
-/** Public representation of a requirement (mirrors the backend ``RequirementOut``). */
-export interface Requirement {
+/** Nested type summary on a work item (mirrors the nested ``WorkItemTypeOut``). */
+export interface WorkItemTypeInfo {
+  id: number
+  name: string
+  id_prefix: string
+  is_builtin: boolean
+}
+
+/** Public representation of a work item (mirrors the backend ``WorkItemOut``). */
+export interface WorkItem {
   id: number
   /** Stable, unique human-readable identifier (e.g. "REQ-00012"). */
   identifier: string
   title: string
-  text: string
-  status: RequirementStatus
-  priority: RequirementPriority
+  type: WorkItemTypeInfo
+  /** Values of the item's per-type attributes, keyed by attribute key. */
+  attributes: Record<string, unknown>
   /** Username of the current lock holder, or null when unlocked. */
   locked_by: string | null
 }
 
-/** Payload for creating a requirement (mirrors ``RequirementCreateRequest``). */
-export interface RequirementCreate {
+/** Payload for creating a work item (mirrors ``WorkItemCreateRequest``). */
+export interface WorkItemCreate {
+  type_id: number
   title: string
-  text?: string
-  status?: RequirementStatus
-  priority?: RequirementPriority
+  attributes: Record<string, unknown>
 }
 
-/** Payload for updating a requirement; only provided fields change (mirrors ``RequirementUpdateRequest``). */
-export interface RequirementUpdate {
+/** Payload for updating a work item; only provided fields change (mirrors ``WorkItemUpdateRequest``). */
+export interface WorkItemUpdate {
   title?: string
-  text?: string
-  status?: RequirementStatus
-  priority?: RequirementPriority
+  /** Merged over the stored values; the complete map must conform. */
+  attributes?: Record<string, unknown>
+}
+
+/** Public representation of a work-item type with its attribute definitions (mirrors the registry ``WorkItemTypeOut``). */
+export interface WorkItemType {
+  id: number
+  name: string
+  description: string
+  id_prefix: string
+  is_builtin: boolean
+  attributes: AttributeDefinitionOut[]
+}
+
+/** Payload for creating a work-item type with its initial attributes. */
+export interface WorkItemTypeCreate {
+  name: string
+  description: string
+  id_prefix: string
+  attributes: AttributeDefinition[]
+}
+
+/** Payload for modifying a work-item type; omitted fields are untouched. */
+export interface WorkItemTypeUpdate {
+  name?: string
+  description?: string
+  id_prefix?: string
 }

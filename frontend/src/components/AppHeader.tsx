@@ -39,9 +39,14 @@ export default function AppHeader({ back }: AppHeaderProps) {
         </Link>
       )}
       {user?.is_admin && (
-        <Link to="/users" className="back-link">
-          Users
-        </Link>
+        <>
+          <Link to="/users" className="back-link">
+            Users
+          </Link>
+          <Link to="/work-item-types" className="back-link">
+            Types
+          </Link>
+        </>
       )}
       <span className="spacer" />
       <span className="muted">

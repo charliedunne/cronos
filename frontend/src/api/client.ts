@@ -4,7 +4,18 @@
  * the backend), so the httpOnly session cookie is attached automatically.
  */
 
-import type { Module, Requirement, RequirementCreate, RequirementUpdate, User } from './types'
+import type {
+  AttributeDefinition,
+  AttributeDefinitionOut,
+  Module,
+  User,
+  WorkItem,
+  WorkItemCreate,
+  WorkItemUpdate,
+  WorkItemType,
+  WorkItemTypeCreate,
+  WorkItemTypeUpdate,
+} from './types'
 
 const API_BASE = '/api/v1'
 
@@ -46,6 +57,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       const body = (await res.json()) as { detail?: unknown }
       if (typeof body.detail === 'string') {
         detail = body.detail
+      } else if (body.detail && typeof body.detail === 'object') {
+        // Validation errors arrive as {"detail": {"errors": [...]}}.
+        const errors = (body.detail as { errors?: unknown }).errors
+        if (Array.isArray(errors) && errors.length > 0) {
+          detail = errors.map((e) => String(e)).join('; ')
+        }
       }
     } catch {
       // Non-JSON error body; keep the generic message.
@@ -126,82 +143,181 @@ export const api = {
     }),
 
   /**
-   * Delete a module that contains no requirements.
+   * Delete a module that contains no work items.
    *
    * @param id The module to delete.
-   * @throws ApiError 409 when the module still contains requirements.
+   * @throws ApiError 409 when the module still contains work items.
    */
-  deleteModule: (id: number) =>
-    request<void>(`/modules/${id}`, { method: 'DELETE' }),
+  deleteModule: (id: number) => request<void>(`/modules/${id}`, { method: 'DELETE' }),
 
   /**
-   * List the requirements of a module with attributes and lock state.
+   * List a module's work items with type, attribute values, and lock state.
    *
-   * @param moduleId The module whose requirements to list.
-   * @return The module's requirements ordered by identifier.
+   * @param moduleId The module whose work items to list.
+   * @return The module's work items ordered by identifier sequence.
    * @throws ApiError 404 when no such module exists.
    */
-  listRequirements: (moduleId: number) =>
-    request<Requirement[]>(`/modules/${moduleId}/requirements`),
+  listWorkItems: (moduleId: number) =>
+    request<WorkItem[]>(`/modules/${moduleId}/work-items`),
 
   /**
-   * Create a requirement in a module; the system assigns its identifier.
+   * Create a work item of the chosen type; the system assigns its identifier.
    *
-   * @param moduleId The module to create the requirement in.
-   * @param payload Title, text, and optional status/priority overrides.
-   * @return The created requirement with its assigned identifier.
-   * @throws ApiError 422 for an empty title or invalid enum values.
+   * @param moduleId The module to create the work item in.
+   * @param payload The chosen type, a non-empty title, and attribute values.
+   * @return The created work item with its assigned identifier.
+   * @throws ApiError 404 for an unknown module or type, 422 when attribute
+   *         values do not conform to the type's definitions.
    */
-  createRequirement: (moduleId: number, payload: RequirementCreate) =>
-    request<Requirement>(`/modules/${moduleId}/requirements`, {
+  createWorkItem: (moduleId: number, payload: WorkItemCreate) =>
+    request<WorkItem>(`/modules/${moduleId}/work-items`, {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
 
   /**
-   * Update the attributes of a requirement the caller has locked.
+   * Update a locked work item's title and/or attribute values.
    *
-   * @param id The requirement to update.
-   * @param payload The attribute changes (omitted fields are untouched).
-   * @return The updated requirement (the lock is retained).
-   * @throws ApiError 409 when the caller does not hold the lock.
+   * @param id The work item to update.
+   * @param payload The changes (supplied attributes are merged over the
+   *         stored ones; the complete map must conform).
+   * @return The updated work item (the lock is retained).
+   * @throws ApiError 409 when the caller does not hold the lock, or 422 for
+   *         non-conforming attribute values.
    */
-  updateRequirement: (id: number, payload: RequirementUpdate) =>
-    request<Requirement>(`/requirements/${id}`, {
+  updateWorkItem: (id: number, payload: WorkItemUpdate) =>
+    request<WorkItem>(`/work-items/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }),
 
   /**
-   * Acquire the exclusive editing lock on a requirement.
+   * Delete a work item; only the lock holder may do so.
    *
-   * @param id The requirement to lock.
-   * @return The requirement with its new lock state (caller as holder).
-   * @throws ApiError 409 when the requirement is already locked.
+   * @param id The work item to delete.
+   * @throws ApiError 409 when the caller does not hold the lock.
    */
-  lockRequirement: (id: number) =>
-    request<Requirement>(`/requirements/${id}/lock`, { method: 'POST' }),
+  deleteWorkItem: (id: number) => request<void>(`/work-items/${id}`, { method: 'DELETE' }),
 
   /**
-   * Release the editing lock on a requirement the caller holds.
+   * Acquire the exclusive editing lock on a work item.
    *
-   * @param id The requirement to unlock.
-   * @throws ApiError 409 when the requirement is not locked, or 403 when the
+   * @param id The work item to lock.
+   * @return The work item with its new lock state (caller as holder).
+   * @throws ApiError 409 when the work item is already locked.
+   */
+  lockWorkItem: (id: number) =>
+    request<WorkItem>(`/work-items/${id}/lock`, { method: 'POST' }),
+
+  /**
+   * Release the editing lock on a work item the caller holds.
+   *
+   * @param id The work item to unlock.
+   * @throws ApiError 409 when the work item is not locked, or 403 when the
    *         caller is not the holder.
    */
-  unlockRequirement: (id: number) =>
-    request<void>(`/requirements/${id}/lock`, { method: 'DELETE' }),
+  unlockWorkItem: (id: number) =>
+    request<void>(`/work-items/${id}/lock`, { method: 'DELETE' }),
 
   /**
-   * Force-release the editing lock on a requirement, regardless of holder.
+   * Force-release the editing lock on a work item, regardless of holder.
    *
-   * @param id The requirement whose lock to release.
-   * @return The requirement with its (now empty) lock state.
+   * @param id The work item whose lock to release.
+   * @return The work item with its (now empty) lock state.
    * @throws ApiError 403 when the caller is not an administrator, or 409
-   *         when the requirement is not locked.
+   *         when the work item is not locked.
    */
-  forceReleaseRequirement: (id: number) =>
-    request<Requirement>(`/requirements/${id}/force-release`, { method: 'POST' }),
+  forceReleaseWorkItem: (id: number) =>
+    request<WorkItem>(`/work-items/${id}/force-release`, { method: 'POST' }),
+
+  /**
+   * List every work-item type with its attribute definitions.
+   *
+   * Open to any authenticated user: the element-creation UI needs the type
+   * catalog to render its dynamic form.
+   *
+   * @return All types ordered by name.
+   */
+  listWorkItemTypes: () => request<WorkItemType[]>('/work-item-types'),
+
+  /**
+   * Create a work-item type with its initial attribute definitions (admin-only).
+   *
+   * @param payload The type's name, description, id prefix, and attributes.
+   * @return The created type with its attributes.
+   * @throws ApiError 409 when the name or an attribute key already exists,
+   *         422 for invalid definitions, or 403 for non-administrators.
+   */
+  createWorkItemType: (payload: WorkItemTypeCreate) =>
+    request<WorkItemType>('/work-item-types', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  /**
+   * Modify a work-item type's name, description, or id prefix (admin-only).
+   *
+   * @param id The type to modify.
+   * @param payload The fields to change (omitted fields are untouched).
+   * @return The updated type.
+   * @throws ApiError 403 when changing a built-in type's name or prefix,
+   *         409 on a rename collision, or 403 for non-administrators.
+   */
+  updateWorkItemType: (id: number, payload: WorkItemTypeUpdate) =>
+    request<WorkItemType>(`/work-item-types/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  /**
+   * Delete a work-item type that has no work items (admin-only).
+   *
+   * @param id The type to delete.
+   * @throws ApiError 403 for built-in types, 409 when the type still has
+   *         work items, or 403 for non-administrators.
+   */
+  deleteWorkItemType: (id: number) =>
+    request<void>(`/work-item-types/${id}`, { method: 'DELETE' }),
+
+  /**
+   * Add an attribute definition to a work-item type (admin-only).
+   *
+   * @param typeId The type to extend.
+   * @param payload The attribute's key, label, data type, and options.
+   * @return The created attribute definition.
+   * @throws ApiError 409 when the key already exists on the type, or 422 for
+   *         invalid definitions (reserved keys, bad defaults).
+   */
+  createAttribute: (typeId: number, payload: AttributeDefinition) =>
+    request<AttributeDefinitionOut>(`/work-item-types/${typeId}/attributes`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  /**
+   * Modify an attribute definition; its key is immutable (admin-only).
+   *
+   * @param typeId The type owning the attribute.
+   * @param attributeId The attribute definition to modify.
+   * @param payload The new field values (the key must match the existing one).
+   * @return The updated attribute definition.
+   * @throws ApiError 422 when the key is changed or a default is invalid.
+   */
+  updateAttribute: (typeId: number, attributeId: number, payload: AttributeDefinition) =>
+    request<AttributeDefinitionOut>(`/work-item-types/${typeId}/attributes/${attributeId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  /**
+   * Remove an attribute definition from a type; stored values for the key
+   * are stripped from all work items of that type (admin-only).
+   *
+   * @param typeId The type owning the attribute.
+   * @param attributeId The attribute definition to remove.
+   */
+  deleteAttribute: (typeId: number, attributeId: number) =>
+    request<void>(`/work-item-types/${typeId}/attributes/${attributeId}`, { method: 'DELETE' }),
 
   /**
    * List every user account with role and active state (admin-only).
@@ -233,8 +349,7 @@ export const api = {
    * @return The updated user's public profile.
    * @throws ApiError 404 when no such user exists, or 403 for non-admins.
    */
-  disableUser: (id: number) =>
-    request<User>(`/users/${id}/disable`, { method: 'POST' }),
+  disableUser: (id: number) => request<User>(`/users/${id}/disable`, { method: 'POST' }),
 
   /**
    * Re-enable a previously disabled user account (admin-only).

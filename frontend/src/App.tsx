@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ModuleDetailPage from './pages/ModuleDetailPage'
 import UsersPage from './pages/UsersPage'
+import WorkItemTypesPage from './pages/WorkItemTypesPage'
 import './App.css'
 
 /**
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/modules/:id" element={<ModuleDetailPage />} />
         <Route element={<RequireAdmin />}>
           <Route path="/users" element={<UsersPage />} />
+          <Route path="/work-item-types" element={<WorkItemTypesPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -125,7 +125,7 @@ export default function UsersPage() {
           ) : users.length === 0 ? (
             <p className="muted">No users yet. Create the first one above.</p>
           ) : (
-            <table className="req-table">
+            <table className="item-table">
               <thead>
                 <tr>
                   <th>Username</th>
@@ -137,7 +137,7 @@ export default function UsersPage() {
               <tbody>
                 {users.map((user) => (
                   <tr key={user.id}>
-                    <td className="req-id">{user.username}</td>
+                    <td className="item-id">{user.username}</td>
                     <td>{user.is_admin ? 'Admin' : 'User'}</td>
                     <td>{user.is_active ? 'Active' : 'Disabled'}</td>
                     <td>

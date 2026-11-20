@@ -8,11 +8,15 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Integer,
     Sequence,
     String,
     Text,
+    UniqueConstraint,
     func,
+    text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -67,11 +71,11 @@ class Session(Base):
 
 
 class Module(Base):
-    """A top-level container for requirements.
+    """A top-level container for work items.
 
     Names are unique across all modules (spec: requirement-store); a module
-    that still contains requirements cannot be deleted, which the API
-    enforces before issuing the DELETE (the FK is RESTRICT by default).
+    that still contains work items cannot be deleted, which the API enforces
+    before issuing the DELETE (the FK is RESTRICT by default).
     """
 
     __tablename__ = "modules"
@@ -85,35 +89,99 @@ class Module(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    #: Requirements contained in this module.
-    requirements: Mapped[list["Requirement"]] = relationship(back_populates="module")
+    #: Work items contained in this module.
+    work_items: Mapped[list["WorkItem"]] = relationship(back_populates="module")
 
 
-class Requirement(Base):
-    """A single requirement with a fixed attribute set.
+class WorkItemType(Base):
+    """A kind of work item, defined and managed by administrators.
 
-    The human-readable identifier ("REQ-" + zero-padded number) is derived
-    from ``req_no``, which is drawn from a monotonically advancing sequence,
-    so identifiers are stable, unique, and never reused after deletion
-    (design.md decision D4).
+    Every work item is an instance of exactly one type (spec: work-items).
+    ``id_prefix`` is the stable prefix rendered into each work item's
+    human-readable identifier; built-in types (``is_builtin``) cannot be
+    deleted or renamed (design.md decision D3).
     """
 
-    __tablename__ = "requirements"
+    __tablename__ = "work_item_types"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    id_prefix: Mapped[str] = mapped_column(String(16), nullable=False)
+    is_builtin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    #: The attribute definitions of this type, in display order. Positions
+    #: are unique within a type (see the table constraint), and the id tie-
+    #: break keeps the ordering deterministic regardless.
+    attributes: Mapped[list["AttributeDefinition"]] = relationship(
+        back_populates="type",
+        cascade="all, delete-orphan",
+        order_by="AttributeDefinition.position, AttributeDefinition.id",
+    )
+
+
+class AttributeDefinition(Base):
+    """One typed attribute carried by the work items of a type.
+
+    ``key`` is unique within the type and MUST NOT be a reserved system key
+    (``title`` / ``id`` — spec: work-items, mandatory system attributes).
+    ``options`` holds the allowed values for enum attributes; ``default_value``
+    (JSONB) is applied when a work item omits the attribute. ``position``
+    orders the attributes for display and is unique within the type (spec:
+    work-items, attribute definitions); an omitted position is auto-assigned
+    by the API so the attribute is appended after the existing ones.
+    """
+
+    __tablename__ = "attribute_definitions"
+    __table_args__ = (
+        UniqueConstraint("type_id", "key", name="uq_attribute_definitions_type_key"),
+        UniqueConstraint(
+            "type_id", "position", name="uq_attribute_definitions_type_position"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    type_id: Mapped[int] = mapped_column(
+        ForeignKey("work_item_types.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    key: Mapped[str] = mapped_column(String(64), nullable=False)
+    label: Mapped[str] = mapped_column(String(128), nullable=False)
+    data_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    options: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    default_value: Mapped[object | None] = mapped_column(JSONB, nullable=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    #: The type this attribute belongs to.
+    type: Mapped["WorkItemType"] = relationship(back_populates="attributes")
+
+
+class WorkItem(Base):
+    """A single element of a module, typed by a :class:`WorkItemType`.
+
+    Every work item carries the mandatory system attributes — a non-empty
+    ``title`` (first-class column) and a system-assigned identifier rendered
+    as ``<TYPE_PREFIX>-<zero-padded seq>`` from the monotonically advancing
+    global sequence, so identifiers are stable, unique, and never reused
+    after deletion (design.md decisions D1/D2). All other attribute values
+    live in the JSONB ``attributes`` column, keyed by the attribute
+    definition's key. The type is set at creation and immutable.
+    """
+
+    __tablename__ = "work_items"
     __table_args__ = (
         CheckConstraint("length(trim(title)) > 0", name="ck_requirements_title_nonempty"),
-        CheckConstraint(
-            "status IN ('draft', 'in-review', 'approved', 'deprecated')",
-            name="ck_requirements_status",
-        ),
-        CheckConstraint(
-            "priority IN ('low', 'medium', 'high')",
-            name="ck_requirements_priority",
-        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     module_id: Mapped[int] = mapped_column(
         ForeignKey("modules.id"), nullable=False, index=True
+    )
+    type_id: Mapped[int] = mapped_column(
+        ForeignKey("work_item_types.id"), nullable=False, index=True
     )
     req_no: Mapped[int] = mapped_column(
         BigInteger,
@@ -121,13 +189,9 @@ class Requirement(Base):
         nullable=False,
         default=Sequence("requirement_req_no_seq"),
     )
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    text: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    status: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="draft"
-    )
-    priority: Mapped[str] = mapped_column(
-        String(16), nullable=False, default="medium"
+    title: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    attributes: Mapped[dict] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -137,17 +201,19 @@ class Requirement(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    #: The module this requirement belongs to.
-    module: Mapped["Module"] = relationship(back_populates="requirements")
-    #: The exclusive editing lock, if any (at most one per requirement).
+    #: The module this work item belongs to.
+    module: Mapped["Module"] = relationship(back_populates="work_items")
+    #: The type of this work item (immutable after creation).
+    type: Mapped["WorkItemType"] = relationship()
+    #: The exclusive editing lock, if any (at most one per work item).
     lock: Mapped["Lock | None"] = relationship(
-        back_populates="requirement", uselist=False
+        back_populates="work_item", uselist=False
     )
 
     @property
     def identifier(self) -> str:
         """The stable human-readable identifier (e.g. ``REQ-000042``)."""
-        return f"REQ-{self.req_no:06d}"
+        return f"{self.type.id_prefix}-{self.req_no:06d}"
 
     @property
     def locked_by(self) -> str | None:
@@ -156,19 +222,19 @@ class Requirement(Base):
 
 
 class Lock(Base):
-    """An exclusive editing lock on a single requirement.
+    """An exclusive editing lock on a single work item.
 
-    ``requirement_id`` is the primary key, so at most one lock row exists
-    per requirement; a concurrent second INSERT fails with a unique
-    violation which the API maps to HTTP 409 (design.md decision D5).
-    Locks persist until released by the holder or force-released by an
-    administrator — there is no expiry in v1.
+    ``item_id`` is the primary key, so at most one lock row exists per work
+    item; a concurrent second INSERT fails with a unique violation which the
+    API maps to HTTP 409 (design.md decision D5). Locks persist until
+    released by the holder or force-released by an administrator — there is
+    no expiry in v1.
     """
 
     __tablename__ = "locks"
 
-    requirement_id: Mapped[int] = mapped_column(
-        ForeignKey("requirements.id", ondelete="CASCADE"), primary_key=True
+    item_id: Mapped[int] = mapped_column(
+        ForeignKey("work_items.id", ondelete="CASCADE"), primary_key=True
     )
     holder_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
@@ -177,7 +243,7 @@ class Lock(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    #: The requirement this lock protects.
-    requirement: Mapped["Requirement"] = relationship(back_populates="lock")
+    #: The work item this lock protects.
+    work_item: Mapped["WorkItem"] = relationship(back_populates="lock")
     #: The user holding the lock.
     holder: Mapped["User"] = relationship()

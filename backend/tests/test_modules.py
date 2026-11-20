@@ -8,7 +8,7 @@ authenticated calls while ``user`` carries the account's metadata.
 import uuid
 
 from app.db import SessionLocal
-from app.models import Requirement
+from app.models import WorkItem
 
 
 def _new_name(prefix: str) -> str:
@@ -59,20 +59,19 @@ def test_rename_module_and_conflict(client, user):
 
 
 def test_delete_non_empty_module_rejected(client, user):
-    """Deleting a module that still has requirements yields 409 and the
-    requirement remains intact."""
+    """Deleting a module that still has work items yields 409 and the work
+    item remains intact."""
     name = _new_name("fullmod")
     created = client.post("/api/v1/modules", json={"name": name})
     assert created.status_code == 201
     module_id = created.json()["id"]
 
-    # Add a requirement directly through the ORM (requirement endpoints
-    # land in task 3.3).
+    # Add a built-in requirement work item directly through the ORM.
     with SessionLocal() as session:
-        requirement = Requirement(
-            module_id=module_id, title="keep me", created_by=user["id"]
+        work_item = WorkItem(
+            module_id=module_id, type_id=1, title="keep me", created_by=user["id"]
         )
-        session.add(requirement)
+        session.add(work_item)
         session.commit()
 
     deleted = client.delete(f"/api/v1/modules/{module_id}")
@@ -80,8 +79,8 @@ def test_delete_non_empty_module_rejected(client, user):
 
     with SessionLocal() as session:
         still_there = (
-            session.query(Requirement)
-            .filter(Requirement.module_id == module_id)
+            session.query(WorkItem)
+            .filter(WorkItem.module_id == module_id)
             .first()
         )
         assert still_there is not None
