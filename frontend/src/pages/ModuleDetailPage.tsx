@@ -124,6 +124,17 @@ export default function ModuleDetailPage() {
     onError: (err) => setError(messageOf(err)),
   })
 
+  // Administrators may force-release a lock held by anyone else; the
+  // holder's own Unblock already covers their own locks.
+  const forceReleaseMutation = useMutation({
+    mutationFn: (reqId: number) => api.forceReleaseRequirement(reqId),
+    onSuccess: () => {
+      setError(null)
+      invalidate()
+    },
+    onError: (err) => setError(messageOf(err)),
+  })
+
   const updateMutation = useMutation({
     mutationFn: ({ reqId, payload }: { reqId: number; payload: RequirementUpdate }) =>
       api.updateRequirement(reqId, payload),
@@ -279,7 +290,16 @@ export default function ModuleDetailPage() {
                   onSaveEdit={() => saveEdit(req.id)}
                   onBlock={() => lockMutation.mutate(req.id)}
                   onUnblock={() => unlockMutation.mutate(req.id)}
-                  busy={lockMutation.isPending || unlockMutation.isPending || updateMutation.isPending}
+                  canForceUnblock={
+                    user.is_admin && req.locked_by !== null && req.locked_by !== user.username
+                  }
+                  onForceUnblock={() => forceReleaseMutation.mutate(req.id)}
+                  busy={
+                    lockMutation.isPending ||
+                    unlockMutation.isPending ||
+                    forceReleaseMutation.isPending ||
+                    updateMutation.isPending
+                  }
                 />
               ))}
             </tbody>
@@ -315,6 +335,10 @@ interface RequirementRowProps {
   onBlock: () => void
   /** Release the lock on this requirement (holder only). */
   onUnblock: () => void
+  /** True when the viewer may force-release a lock held by someone else. */
+  canForceUnblock: boolean
+  /** Force-release the lock on this requirement (admin only). */
+  onForceUnblock: () => void
   /** True while any row mutation is in flight (disables action buttons). */
   busy: boolean
 }
@@ -325,8 +349,10 @@ interface RequirementRowProps {
  * In display mode the row shows the attributes, a lock badge naming the
  * holder when locked, and the actions allowed by the editing-locks spec:
  * anyone may Block an unlocked requirement; only the holder may Edit or
- * Unblock; non-holders see a disabled Edit. In edit mode (holder only) the
- * attribute cells become inputs bound to the shared draft.
+ * Unblock; non-holders see a disabled Edit. Administrators additionally get
+ * a Force unblock button on locks held by someone else (the holder's own
+ * Unblock covers their own locks). In edit mode (holder only) the attribute
+ * cells become inputs bound to the shared draft.
  *
  * @param props Row data and callbacks.
  * @return The table row element.
@@ -342,6 +368,8 @@ function RequirementRow({
   onSaveEdit,
   onBlock,
   onUnblock,
+  canForceUnblock,
+  onForceUnblock,
   busy,
 }: RequirementRowProps) {
   if (isEditing) {
@@ -441,9 +469,21 @@ function RequirementRow({
             </button>
           </>
         ) : (
-          <button type="button" disabled title={`Locked by ${req.locked_by}`}>
-            Edit
-          </button>
+          <>
+            <button type="button" disabled title={`Locked by ${req.locked_by}`}>
+              Edit
+            </button>
+            {canForceUnblock && (
+              <button
+                type="button"
+                className="secondary"
+                onClick={onForceUnblock}
+                disabled={busy}
+              >
+                Force unblock
+              </button>
+            )}
+          </>
         )}
       </td>
     </tr>

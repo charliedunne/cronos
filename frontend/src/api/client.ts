@@ -191,4 +191,15 @@ export const api = {
    */
   unlockRequirement: (id: number) =>
     request<void>(`/requirements/${id}/lock`, { method: 'DELETE' }),
+
+  /**
+   * Force-release the editing lock on a requirement, regardless of holder.
+   *
+   * @param id The requirement whose lock to release.
+   * @return The requirement with its (now empty) lock state.
+   * @throws ApiError 403 when the caller is not an administrator, or 409
+   *         when the requirement is not locked.
+   */
+  forceReleaseRequirement: (id: number) =>
+    request<Requirement>(`/requirements/${id}/force-release`, { method: 'POST' }),
 }
