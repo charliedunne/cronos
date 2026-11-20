@@ -6,3 +6,9 @@ export interface User {
   username: string
   is_admin: boolean
 }
+
+/** Public representation of a module (mirrors the backend ``ModuleOut``). */
+export interface Module {
+  id: number
+  name: string
+}

@@ -1,14 +1,15 @@
-/** Protected home page: session summary plus logout (module list lands in 5.2). */
+/** Protected home page: module list plus session header with logout. */
 
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import ModuleList from '../components/ModuleList'
 
 /**
  * Render the authenticated landing page.
  *
- * Shows who is signed in and offers logout, which revokes the session
- * server-side and returns to the login page. The module list (task 5.2)
- * will replace this placeholder content.
+ * Shows the signed-in user in the header, offers logout (which revokes the
+ * session server-side and returns to the login page), and hosts the module
+ * list as the main content.
  *
  * @return The home page element.
  */
@@ -44,10 +45,7 @@ export default function HomePage() {
       </header>
 
       <main className="content">
-        <h1>Welcome, {user.username}</h1>
-        <p className="muted">
-          Your session is active. The module browser will appear here.
-        </p>
+        <ModuleList />
       </main>
     </div>
   )

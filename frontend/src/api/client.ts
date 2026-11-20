@@ -4,7 +4,7 @@
  * the backend), so the httpOnly session cookie is attached automatically.
  */
 
-import type { User } from './types'
+import type { Module, User } from './types'
 
 const API_BASE = '/api/v1'
 
@@ -53,6 +53,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiError(res.status, detail)
   }
 
+  // DELETE and other 204 responses carry no body.
+  if (res.status === 204) {
+    return undefined as T
+  }
   return (await res.json()) as T
 }
 
@@ -86,4 +90,47 @@ export const api = {
    * @return A short confirmation payload.
    */
   logout: () => request<{ status: string }>('/auth/logout', { method: 'POST' }),
+
+  /**
+   * List all modules, ordered by name.
+   *
+   * @return Every module the caller may see.
+   */
+  listModules: () => request<Module[]>('/modules'),
+
+  /**
+   * Create a module with a unique name.
+   *
+   * @param name The requested module name.
+   * @return The created module.
+   * @throws ApiError 409 when the name is already in use.
+   */
+  createModule: (name: string) =>
+    request<Module>('/modules', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+
+  /**
+   * Rename a module.
+   *
+   * @param id The module to rename.
+   * @param name The new unique name.
+   * @return The updated module.
+   * @throws ApiError 409 when the new name is already in use.
+   */
+  renameModule: (id: number, name: string) =>
+    request<Module>(`/modules/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
+    }),
+
+  /**
+   * Delete a module that contains no requirements.
+   *
+   * @param id The module to delete.
+   * @throws ApiError 409 when the module still contains requirements.
+   */
+  deleteModule: (id: number) =>
+    request<void>(`/modules/${id}`, { method: 'DELETE' }),
 }
