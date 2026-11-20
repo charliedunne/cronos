@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DbSession
 
@@ -34,6 +35,21 @@ def _get_user_or_404(db: DbSession, user_id: int) -> User:
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
     return user
+
+
+@router.get("", response_model=list[UserOut])
+def list_users(
+    admin: User = Depends(require_admin),
+    db: DbSession = Depends(get_db),
+) -> list[User]:
+    """List every user account (admin-only).
+
+    @param admin The administrator performing the action (enforced by
+        :func:`require_admin`).
+    @param db Database session for the lookup.
+    @return All users ordered by username, each with role and active state.
+    """
+    return list(db.scalars(select(User).order_by(User.username)))
 
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=UserOut)

@@ -97,6 +97,29 @@ def test_duplicate_username_is_rejected(admin_client, cleanup_users):
     assert second.status_code == 409
 
 
+def test_admin_lists_users_with_role_and_state(admin_client, cleanup_users):
+    """The admin-only list returns every account with role and active state."""
+    username = _new_username("listed")
+    created = admin_client.post(
+        "/api/v1/users", json={"username": username, "password": "pw-list"}
+    )
+    assert created.status_code == 201
+    cleanup_users.append(created.json()["id"])
+
+    response = admin_client.get("/api/v1/users")
+    assert response.status_code == 200
+    entries = {entry["username"]: entry for entry in response.json()}
+
+    # The new account is present with its role and active state.
+    listed = entries[username]
+    assert listed["is_admin"] is False
+    assert listed["is_active"] is True
+
+    # The calling administrator sees themselves as an admin.
+    me = admin_client.get("/api/v1/auth/me").json()
+    assert entries[me["username"]]["is_admin"] is True
+
+
 def test_non_admin_cannot_manage_users(admin_client, cleanup_users):
     """A regular user gets 403 on the account management endpoints."""
     username = _new_username("regular")
@@ -114,6 +137,9 @@ def test_non_admin_cannot_manage_users(admin_client, cleanup_users):
         "/api/v1/auth/login", json={"username": username, "password": password}
     )
     assert login.status_code == 200
+
+    forbidden_list = user_client.get("/api/v1/users")
+    assert forbidden_list.status_code == 403
 
     forbidden_create = user_client.post(
         "/api/v1/users",

@@ -5,6 +5,7 @@ export interface User {
   id: number
   username: string
   is_admin: boolean
+  is_active: boolean
 }
 
 /** Public representation of a module (mirrors the backend ``ModuleOut``). */

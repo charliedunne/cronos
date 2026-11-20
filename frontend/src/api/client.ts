@@ -202,4 +202,46 @@ export const api = {
    */
   forceReleaseRequirement: (id: number) =>
     request<Requirement>(`/requirements/${id}/force-release`, { method: 'POST' }),
+
+  /**
+   * List every user account with role and active state (admin-only).
+   *
+   * @return All users ordered by username.
+   * @throws ApiError 403 when the caller is not an administrator.
+   */
+  listUsers: () => request<User[]>('/users'),
+
+  /**
+   * Create a new (non-admin) user account (admin-only).
+   *
+   * @param username The requested unique username.
+   * @param password The initial password for the account.
+   * @return The created user's public profile.
+   * @throws ApiError 409 when the username is already taken, or 403 for
+   *         non-administrators.
+   */
+  createUser: (username: string, password: string) =>
+    request<User>('/users', {
+      method: 'POST',
+      body: JSON.stringify({ username, password }),
+    }),
+
+  /**
+   * Disable a user account, blocking login and existing sessions (admin-only).
+   *
+   * @param id The account to disable.
+   * @return The updated user's public profile.
+   * @throws ApiError 404 when no such user exists, or 403 for non-admins.
+   */
+  disableUser: (id: number) =>
+    request<User>(`/users/${id}/disable`, { method: 'POST' }),
+
+  /**
+   * Re-enable a previously disabled user account (admin-only).
+   *
+   * @param id The account to re-enable.
+   * @return The updated user's public profile.
+   * @throws ApiError 404 when no such user exists, or 403 for non-admins.
+   */
+  enableUser: (id: number) => request<User>(`/users/${id}/enable`, { method: 'POST' }),
 }

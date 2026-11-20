@@ -1,10 +1,12 @@
 /** Application routes: public login page plus the protected area. */
 
 import { Navigate, Route, Routes } from 'react-router-dom'
+import RequireAdmin from './components/RequireAdmin'
 import RequireAuth from './components/RequireAuth'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ModuleDetailPage from './pages/ModuleDetailPage'
+import UsersPage from './pages/UsersPage'
 import './App.css'
 
 /**
@@ -19,6 +21,9 @@ export default function App() {
       <Route element={<RequireAuth />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/modules/:id" element={<ModuleDetailPage />} />
+        <Route element={<RequireAdmin />}>
+          <Route path="/users" element={<UsersPage />} />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

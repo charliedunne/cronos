@@ -11,8 +11,9 @@ interface AppHeaderProps {
 /**
  * Render the application header for authenticated pages.
  *
- * Shows the product name, an optional back link, the signed-in user, and a
- * logout button that revokes the session server-side and returns to login.
+ * Shows the product name, an optional back link, a "Users" link for
+ * administrators, the signed-in user, and a logout button that revokes the
+ * session server-side and returns to login.
  *
  * @param props Optional back link configuration.
  * @return The header element.
@@ -35,6 +36,11 @@ export default function AppHeader({ back }: AppHeaderProps) {
       {back !== undefined && (
         <Link to={back.to} className="back-link">
           {back.label}
+        </Link>
+      )}
+      {user?.is_admin && (
+        <Link to="/users" className="back-link">
+          Users
         </Link>
       )}
       <span className="spacer" />
