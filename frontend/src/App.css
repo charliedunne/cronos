@@ -228,3 +228,41 @@ button.danger:hover:not(:disabled) {
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+
+/* Lock state and row actions in the requirement table. */
+.lock-cell {
+  white-space: nowrap;
+}
+
+.lock-badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: #fdecea;
+  color: var(--danger);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+/* The signed-in user holds this lock. */
+.lock-badge.mine {
+  background: #e7f0fd;
+  color: #1a56b0;
+}
+
+.row-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.row-actions button {
+  margin-left: 0.35rem;
+}
+
+/* Inline edit row (only the lock holder reaches this state). */
+.req-edit-row input,
+.req-edit-row textarea,
+.req-edit-row select {
+  width: 100%;
+  box-sizing: border-box;
+}

@@ -4,7 +4,7 @@
  * the backend), so the httpOnly session cookie is attached automatically.
  */
 
-import type { Module, Requirement, RequirementCreate, User } from './types'
+import type { Module, Requirement, RequirementCreate, RequirementUpdate, User } from './types'
 
 const API_BASE = '/api/v1'
 
@@ -157,4 +157,38 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+
+  /**
+   * Update the attributes of a requirement the caller has locked.
+   *
+   * @param id The requirement to update.
+   * @param payload The attribute changes (omitted fields are untouched).
+   * @return The updated requirement (the lock is retained).
+   * @throws ApiError 409 when the caller does not hold the lock.
+   */
+  updateRequirement: (id: number, payload: RequirementUpdate) =>
+    request<Requirement>(`/requirements/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  /**
+   * Acquire the exclusive editing lock on a requirement.
+   *
+   * @param id The requirement to lock.
+   * @return The requirement with its new lock state (caller as holder).
+   * @throws ApiError 409 when the requirement is already locked.
+   */
+  lockRequirement: (id: number) =>
+    request<Requirement>(`/requirements/${id}/lock`, { method: 'POST' }),
+
+  /**
+   * Release the editing lock on a requirement the caller holds.
+   *
+   * @param id The requirement to unlock.
+   * @throws ApiError 409 when the requirement is not locked, or 403 when the
+   *         caller is not the holder.
+   */
+  unlockRequirement: (id: number) =>
+    request<void>(`/requirements/${id}/lock`, { method: 'DELETE' }),
 }

@@ -45,3 +45,11 @@ export interface RequirementCreate {
   status?: RequirementStatus
   priority?: RequirementPriority
 }
+
+/** Payload for updating a requirement; only provided fields change (mirrors ``RequirementUpdateRequest``). */
+export interface RequirementUpdate {
+  title?: string
+  text?: string
+  status?: RequirementStatus
+  priority?: RequirementPriority
+}
