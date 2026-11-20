@@ -37,7 +37,7 @@
 
 ## 6. Integration checks
 
-- [ ] 6.1 Add an end-to-end API test spanning auth → module → requirement → lock with two users — verify: the integration test passes, including the concurrent-lock conflict rejection
+- [x] 6.1 Add an end-to-end API test spanning auth → module → requirement → lock with two users — verify: the integration test passes, including the concurrent-lock conflict rejection
 - [ ] 6.2 Write a README covering setup (database via docker-compose, migrations, seeding the first admin, running backend and frontend) — verify: following the README from a fresh clone reaches a working application
 
 ## Workflow follow-up
