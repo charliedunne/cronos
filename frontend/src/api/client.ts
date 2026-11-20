@@ -4,7 +4,7 @@
  * the backend), so the httpOnly session cookie is attached automatically.
  */
 
-import type { Module, User } from './types'
+import type { Module, Requirement, RequirementCreate, User } from './types'
 
 const API_BASE = '/api/v1'
 
@@ -133,4 +133,28 @@ export const api = {
    */
   deleteModule: (id: number) =>
     request<void>(`/modules/${id}`, { method: 'DELETE' }),
+
+  /**
+   * List the requirements of a module with attributes and lock state.
+   *
+   * @param moduleId The module whose requirements to list.
+   * @return The module's requirements ordered by identifier.
+   * @throws ApiError 404 when no such module exists.
+   */
+  listRequirements: (moduleId: number) =>
+    request<Requirement[]>(`/modules/${moduleId}/requirements`),
+
+  /**
+   * Create a requirement in a module; the system assigns its identifier.
+   *
+   * @param moduleId The module to create the requirement in.
+   * @param payload Title, text, and optional status/priority overrides.
+   * @return The created requirement with its assigned identifier.
+   * @throws ApiError 422 for an empty title or invalid enum values.
+   */
+  createRequirement: (moduleId: number, payload: RequirementCreate) =>
+    request<Requirement>(`/modules/${moduleId}/requirements`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 }

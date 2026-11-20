@@ -32,7 +32,7 @@
 
 - [x] 5.1 Build the login page and session handling (cookie auth, logout) — verify: in the dev environment, logging in as the seeded admin sets the cookie, a protected route loads, and logout returns to the login page
 - [x] 5.2 Build the module list with create/rename/delete actions — verify: in the dev environment, creating a module makes it appear in the list and deleting a non-empty module shows an error instead of removing it
-- [ ] 5.3 Build the requirement list within a module plus a create form (title, text, status, priority) — verify: in the dev environment, a created requirement appears with its identifier and default values, and attribute edits persist after reload
+- [x] 5.3 Build the requirement list within a module plus a create form (title, text, status, priority) — verify: in the dev environment, a created requirement appears with its identifier and default values, and attribute edits persist after reload
 - [ ] 5.4 Build the lock UI: holder badge on locked rows, Block/Unblock actions, editing disabled for non-holders — verify: in the dev environment with two accounts, user A locking shows a badge to user B who cannot edit, and after A unlocks, B can lock and edit
 
 ## 6. Integration checks

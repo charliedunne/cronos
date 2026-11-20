@@ -1,6 +1,7 @@
 /** Module list with create, rename, and delete actions. */
 
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError } from '../api/client'
 
@@ -163,7 +164,9 @@ export default function ModuleList() {
               </li>
             ) : (
               <li key={module.id} className="module-row">
-                <span className="module-name">{module.name}</span>
+                <Link to={`/modules/${module.id}`} className="module-name">
+                  {module.name}
+                </Link>
                 <span className="spacer" />
                 <button
                   type="button"

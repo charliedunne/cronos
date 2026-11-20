@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import RequireAuth from './components/RequireAuth'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
+import ModuleDetailPage from './pages/ModuleDetailPage'
 import './App.css'
 
 /**
@@ -17,6 +18,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route element={<RequireAuth />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/modules/:id" element={<ModuleDetailPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,7 +1,7 @@
 /** Protected home page: module list plus session header with logout. */
 
-import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import AppHeader from '../components/AppHeader'
 import ModuleList from '../components/ModuleList'
 
 /**
@@ -14,16 +14,7 @@ import ModuleList from '../components/ModuleList'
  * @return The home page element.
  */
 export default function HomePage() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
-
-  /**
-   * Log out and return to the login page.
-   */
-  async function handleLogout() {
-    await logout()
-    navigate('/login', { replace: true })
-  }
+  const { user } = useAuth()
 
   if (!user) {
     // The route guard normally prevents this; render nothing defensively.
@@ -32,18 +23,7 @@ export default function HomePage() {
 
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <span className="brand">Cronos</span>
-        <span className="spacer" />
-        <span className="muted">
-          {user.username}
-          {user.is_admin ? ' (admin)' : ''}
-        </span>
-        <button type="button" onClick={handleLogout}>
-          Log out
-        </button>
-      </header>
-
+      <AppHeader />
       <main className="content">
         <ModuleList />
       </main>
